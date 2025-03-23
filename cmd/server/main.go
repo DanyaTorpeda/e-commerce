@@ -27,7 +27,8 @@ func main() {
 		logger.Fatalf("error occured connecting to db: %s", err.Error())
 	}
 	defer db.Close()
-	servs := services.New(logger)
+	repos := repository.New(db, logger)
+	servs := services.New(repos, logger)
 	handler := handlers.New(servs, logger)
 	srv := new(server.Server)
 	if err := srv.Run(cfg.Server.Port, handler.InitRoutes()); err != nil {

@@ -1,11 +1,26 @@
 package services
 
-import "github.com/sirupsen/logrus"
+import (
+	"e-commerce/internal/domains/user"
+	"e-commerce/internal/repository"
+
+	"github.com/sirupsen/logrus"
+)
+
+type Authorization interface {
+	CreateUser(input user.User) (int, error)
+	CheckUser(input user.UserLogin) (*user.User, error)
+	CreateToken(id int, email string)
+}
 
 type Service struct {
 	logger *logrus.Logger
+	Authorization
 }
 
-func New(logger *logrus.Logger) *Service {
-	return &Service{logger: logger}
+func New(repo *repository.Repository, logger *logrus.Logger) *Service {
+	return &Service{
+		logger:        logger,
+		Authorization: NewAuthService(repo.Authorization, logger),
+	}
 }

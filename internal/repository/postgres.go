@@ -7,6 +7,10 @@ import (
 	_ "github.com/lib/pq"
 )
 
+const (
+	usersTable = "Users"
+)
+
 type Config struct {
 	User     string
 	Password string
