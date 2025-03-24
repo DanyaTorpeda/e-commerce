@@ -3,7 +3,10 @@ package services
 import (
 	"e-commerce/internal/domains/user"
 	"e-commerce/internal/repository"
+	"errors"
+	"time"
 
+	"github.com/dgrijalva/jwt-go"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/crypto/bcrypt"
 )
@@ -11,8 +14,9 @@ import (
 var JWTSecret = []byte("aisjdbnf8uaywbvc807q34fcoyb8q3c487yv")
 
 type Claims struct {
-	UserID    int
-	UserEmail string
+	UserID    int    `json:"user_id"`
+	UserEmail string `json:"user_email"`
+	jwt.StandardClaims
 }
 
 type AuthService struct {
@@ -62,15 +66,56 @@ func (s *AuthService) CheckUser(input user.UserLogin) (*user.User, error) {
 	}
 
 	if err := checkPassword(input.Password, usr.Password); err != nil {
-		s.logger.Warnf("passwords dont match: %s", err.Error())
-		return nil, err
+		s.logger.Warn("invalid login attempt")
+		return nil, errors.New("invalid email or password")
 	}
 
 	return usr, nil
 }
 
-func (s *AuthService) CreateToken(id int, email string) {
+func (s *AuthService) CreateToken(id int, email string) (string, error) {
+	expirationTime := time.Now().Add(12 * time.Hour)
 
+	claims := &Claims{
+		UserID:    id,
+		UserEmail: email,
+		StandardClaims: jwt.StandardClaims{
+			ExpiresAt: expirationTime.Unix(),
+			Issuer:    "e-commerce-app",
+		},
+	}
+
+	token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
+
+	signedToken, err := token.SignedString(JWTSecret)
+	if err != nil {
+		s.logger.Warnf("could not sign the token")
+		return "", errors.New("could not sign the token")
+	}
+
+	return signedToken, nil
+}
+
+func (s *AuthService) ParseToken(tokenString string) (*Claims, error) {
+	token, err := jwt.ParseWithClaims(tokenString, &Claims{}, func(t *jwt.Token) (interface{}, error) {
+		if _, ok := t.Method.(*jwt.SigningMethodHMAC); !ok {
+			s.logger.Warnf("wrong singing method")
+			return nil, errors.New("unexpected signing method")
+		}
+		return JWTSecret, nil
+	})
+
+	if err != nil {
+		return nil, err
+	}
+
+	claims, ok := token.Claims.(*Claims)
+	if !ok || !token.Valid {
+		s.logger.Warn("invalid token")
+		return nil, errors.New("invalid token")
+	}
+
+	return claims, nil
 }
 
 func hashPassword(password string) (string, error) {

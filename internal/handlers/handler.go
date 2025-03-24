@@ -29,7 +29,7 @@ func (h *Handler) InitRoutes() *gin.Engine {
 		auth.POST("/login", h.login)
 	}
 
-	users := router.Group("/users")
+	users := router.Group("/users", h.CheckToken)
 	{
 		users.GET("/me", h.getMe)
 		users.PUT("/me", h.updateMe)

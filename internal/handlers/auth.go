@@ -42,5 +42,12 @@ func (h *Handler) login(c *gin.Context) {
 		return
 	}
 
-	h.service.CreateToken(usr.ID, usr.Role)
+	signedToken, err := h.service.CreateToken(usr.ID, usr.Email)
+	if err != nil {
+		h.logger.Warnf("could not create token: %s", err.Error())
+		NewErrorResponse(c, http.StatusInternalServerError, err.Error())
+		return
+	}
+
+	NewResponse(c, "success", http.StatusOK, "token created", signedToken)
 }

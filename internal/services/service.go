@@ -10,7 +10,8 @@ import (
 type Authorization interface {
 	CreateUser(input user.User) (int, error)
 	CheckUser(input user.UserLogin) (*user.User, error)
-	CreateToken(id int, email string)
+	CreateToken(id int, email string) (string, error)
+	ParseToken(tokenString string) (*Claims, error)
 }
 
 type Service struct {
